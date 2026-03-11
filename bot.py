@@ -393,17 +393,6 @@ async def cb_category(_, cb):
     states[uid] = "step_0"
     await cb.message.edit(f"✅ Category: **{cat}**\n\n" + UPLOAD_STEPS[0][1])
 
-# ─ Tag button callback ────────────────────────────────────────────────────────
-@bot.on_callback_query(filters.regex(r"^tag_(.*)$"))
-async def cb_tag(_, cb):
-    uid = cb.from_user.id
-    if not is_admin(uid): return
-    tag = cb.matches[0].group(1)
-    data[uid]["tag"] = tag
-    states[uid] = "step_8"  # year step
-    await cb.message.edit(
-        f"✅ Tag: **{tag or 'None'}**\n\n" + UPLOAD_STEPS[7][1]  # year step
-    )
 
 # ─ Confirm callback ───────────────────────────────────────────────────────────
 @bot.on_callback_query(filters.regex("^confirm_add$"))
@@ -495,12 +484,6 @@ async def handle_steps(_, m: Message):
         # After tag we show confirm (handled by callback)
         return
 
-    # After tag callback sets step_8 (year), let message handler grab year
-    if state == "step_8":
-        data[uid]["year"] = txt
-        states[uid] = "step_tag"
-        await m.reply("🏷️ **Tag choose karo:**", reply_markup=tag_keyboard())
-        return
 
     # ── EDIT FIELD VALUE ──────────────────────────────────────────────────────
     if state == "editing_field":
@@ -707,17 +690,14 @@ async def cmd_stats(_, m: Message):
 🌐 Website live hai!
 """)
 
-# ── HANDLE TAG STEP (after year, before confirm) ─────────────────────────────
-# state = "step_tag" is handled by tag_keyboard callback above
-# After tag is picked, show confirm
+# ── TAG CALLBACK → Show summary + confirm ────────────────────────────────────
 @bot.on_callback_query(filters.regex(r"^tag_(.*)$"))
 async def cb_tag_confirm(_, cb):
     uid = cb.from_user.id
     if not is_admin(uid): return
     tag = cb.matches[0].group(1)
     data[uid]["tag"] = tag
-    # Show summary + confirm
-    cat = data[uid].get("_preset_cat","anime")
+    cat = data[uid].get("_preset_cat", "anime")
     summary = summary_text(data[uid], cat)
     await cb.message.edit(summary, reply_markup=confirm_keyboard())
     states[uid] = "confirming"
